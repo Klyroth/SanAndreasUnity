@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using SanAndreasUnity.Net;
 using UnityEngine;
 
@@ -141,9 +142,60 @@ namespace SanAndreasUnity.Commands
 
         public static string[] SplitCommandIntoArguments(string command)
         {
-            // TODO: add support for arguments that have spaces, i.e. those enclosed with quotes
+            // Arguments enclosed in quotes (single or double) are kept as a single argument,
+            // e.g. say "hello world" -> ["say", "hello world"].
+            // A backslash escapes the next character inside double quotes.
+            var arguments = new List<string>();
+            var current = new StringBuilder();
+            bool inDoubleQuotes = false;
+            bool inSingleQuotes = false;
+            bool hasCurrent = false;
 
-            return command.Split(new string[] {" ", "\t"}, System.StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < command.Length; i++)
+            {
+                char c = command[i];
+
+                if (c == '\\' && inDoubleQuotes && i + 1 < command.Length)
+                {
+                    current.Append(command[i + 1]);
+                    i++;
+                    hasCurrent = true;
+                    continue;
+                }
+
+                if (c == '"' && !inSingleQuotes)
+                {
+                    inDoubleQuotes = !inDoubleQuotes;
+                    hasCurrent = true;
+                    continue;
+                }
+
+                if (c == '\'' && !inDoubleQuotes)
+                {
+                    inSingleQuotes = !inSingleQuotes;
+                    hasCurrent = true;
+                    continue;
+                }
+
+                if ((c == ' ' || c == '\t') && !inDoubleQuotes && !inSingleQuotes)
+                {
+                    if (hasCurrent)
+                    {
+                        arguments.Add(current.ToString());
+                        current.Clear();
+                        hasCurrent = false;
+                    }
+                    continue;
+                }
+
+                current.Append(c);
+                hasCurrent = true;
+            }
+
+            if (hasCurrent)
+                arguments.Add(current.ToString());
+
+            return arguments.ToArray();
         }
 
         public static string GetRestOfTheCommand(string command, int argumentIndex)
